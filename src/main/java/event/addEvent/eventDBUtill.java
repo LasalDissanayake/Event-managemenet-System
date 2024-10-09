@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-// import event.addEvent.event;
 import event.addEvent.DBConnect;
 
 public class eventDBUtill {

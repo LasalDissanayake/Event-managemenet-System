@@ -1,9 +1,7 @@
 package event.Users;
 
-
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,56 +16,77 @@ import javax.servlet.http.HttpSession;
 
 import event.addEvent.DBConnect;
 
-
 @WebServlet("/UserLoginServlet")
 public class UserLoginServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+		// Retrieve form parameters
 		String uemail = request.getParameter("username");
 		String upwd = request.getParameter("password");
 		HttpSession session = request.getSession();
-		
-		
-		Connection con = null;
 		RequestDispatcher dispatcher = null;
-		
+
+		// Validate input fields
+		if (uemail == null || uemail.trim().isEmpty()) {
+			request.setAttribute("status", "invalidEmail");
+			dispatcher = request.getRequestDispatcher("login.jsp");
+			dispatcher.forward(request, response);
+			return;
+		}
+		if (upwd == null || upwd.trim().isEmpty()) {
+			request.setAttribute("status", "invalidPassword");
+			dispatcher = request.getRequestDispatcher("login.jsp");
+			dispatcher.forward(request, response);
+			return;
+		}
+
+		Connection con = null;
+
 		try {
-			
-			
+			// Get the connection from DBConnect utility class
 			con = DBConnect.getConnection();
-			
-			PreparedStatement pst = con.prepareStatement("select * from user where email = ? and password = ?");
+
+			// Prepare SQL statement
+			PreparedStatement pst = con.prepareStatement("SELECT * FROM user WHERE email = ? AND password = ?");
 			pst.setString(1, uemail);
 			pst.setString(2, upwd);
-			
+
+			// Execute query
 			ResultSet rs = pst.executeQuery();
-			
-			if(rs.next()) {
-				
+
+			if (rs.next()) {
+				// Set session attributes for the logged-in user
 				session.setAttribute("name", rs.getString("name"));
 				session.setAttribute("email", rs.getString("email"));
 				session.setAttribute("id", rs.getString("id"));
+
+				// Redirect to user home page
 				dispatcher = request.getRequestDispatcher("userHome.jsp");
-			}else {
+			} else {
+				// If credentials are incorrect, redirect to login page with error
 				request.setAttribute("status", "failed");
 				dispatcher = request.getRequestDispatcher("login.jsp");
 			}
-			
+
+			// Forward the request to the appropriate page
 			dispatcher.forward(request, response);
-			
-		} catch (Exception e) {
+
+		} catch (SQLException e) {
 			e.printStackTrace();
-			
-		}finally {
-			try {
-				con.close();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			request.setAttribute("status", "dbError");
+			dispatcher = request.getRequestDispatcher("login.jsp");
+			dispatcher.forward(request, response);
+		} finally {
+			// Close the connection if it was opened
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 	}
-
 }
